@@ -87,7 +87,7 @@ export const TIERS: Tier[] = [
   },
   {
     id: 6,
-    label: "Uma em um milhão",
+    label: "Lendária",
     tool: "dinamite",
     toolName: "Dinamite",
     meters: 100,
@@ -131,4 +131,33 @@ export function styleScale(oneIn: number | null): string {
   if (oneIn >= 1000) return `1 em ${Math.round(oneIn / 100) * 100}`;
   if (oneIn >= 100) return `1 em ${Math.round(oneIn / 10) * 10}`;
   return `1 em ${Math.round(oneIn)}`;
+}
+
+/**
+ * How long one dig takes, per tier, in ms. The shovel is a quick scoop; every
+ * rarer tool spends longer charging, digs deeper and lingers on its find.
+ * - `charge`: anticipation before the shaft moves (rev, dust, fuse for dynamite).
+ * - `travel`: the shaft descends and stops hard on the find (the impact).
+ * - `find`: the mineral bursts out of the rock; the reveal panel follows.
+ * Picture, sound and the find sting all read this one table.
+ */
+export type DigTiming = { charge: number; travel: number; find: number; total: number };
+
+const DIG_PHASES: Record<number, [charge: number, travel: number, find: number]> = {
+  1: [90, 480, 230], // Pá: 0,8 s
+  2: [220, 760, 320], // Aspirador: 1,3 s
+  3: [380, 1060, 460], // Escavadeira: 1,9 s
+  4: [560, 1320, 720], // Broca: 2,6 s
+  5: [820, 1540, 1040], // Broca ultra: 3,4 s
+  6: [1380, 720, 2100], // Dinamite: pavio, explosão, diamante subindo (4,2 s)
+};
+
+export function digTimingFor(tierId: number): DigTiming {
+  const [charge, travel, find] = DIG_PHASES[tierId] ?? DIG_PHASES[1];
+  return { charge, travel, find, total: charge + travel + find };
+}
+
+/** Tier dug by a tool (tools and tiers are one to one). */
+export function tierForTool(tool: ToolId): Tier {
+  return TIERS.find((tier) => tier.tool === tool) ?? TIERS[0];
 }

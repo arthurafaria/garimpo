@@ -1,5 +1,6 @@
 import type { ToolId } from "../art/sprites.ts";
-import { buildDig, createOutputChain, MASTER_LEVEL, type DigVoice } from "./dig.ts";
+import type { DigTiming } from "../game/score.ts";
+import { buildDig, buildSting, createOutputChain, MASTER_LEVEL, type DigVoice } from "./dig.ts";
 
 /**
  * Procedural audio: no files, everything synthesized at runtime.
@@ -11,6 +12,7 @@ export class MineAudio {
   private noise: AudioBuffer | null = null;
   private enabled = true;
   private digVoice: DigVoice | null = null;
+  private digTool: ToolId | null = null;
 
   setEnabled(value: boolean): void {
     this.enabled = value;
@@ -23,13 +25,25 @@ export class MineAudio {
     }
   }
 
-  /** Starts the dig sound for `tool`, lasting about `durationMs` (it fades out on its own). Calling it again replaces the previous one. */
-  dig(tool: ToolId, durationMs: number): void {
+  /**
+   * Starts the dig sound for `tool`, following the dig's timeline: the dig
+   * itself up to the impact, then the find sting. Calling it again replaces the
+   * previous one.
+   */
+  dig(tool: ToolId, timing: DigTiming): void {
     const ctx = this.ensure();
     if (!ctx || !this.master) return;
     this.digVoice?.stop(ctx.currentTime);
-    const voice = buildDig(ctx, this.master, tool, ctx.currentTime + 0.01, durationMs / 1000);
+    const voice = buildDig(
+      ctx,
+      this.master,
+      tool,
+      ctx.currentTime + 0.01,
+      (timing.charge + timing.travel) / 1000,
+      timing.charge / 1000,
+    );
     this.digVoice = voice;
+    this.digTool = tool;
     const left = Math.max(0, voice.end - ctx.currentTime) * 1000 + 200;
     setTimeout(() => {
       if (this.digVoice === voice) this.digVoice = null;
@@ -40,6 +54,21 @@ export class MineAudio {
   stopDig(): void {
     if (this.digVoice && this.ctx) this.digVoice.stop(this.ctx.currentTime);
     this.digVoice = null;
+  }
+
+  /**
+   * The player skipped the animation. Before the impact the dig is cut and the
+   * find sting plays right away; after it, the sting is already ringing and is
+   * left alone.
+   */
+  skipDig(): void {
+    const ctx = this.ctx;
+    const voice = this.digVoice;
+    if (!ctx || !this.master || !voice || !this.digTool) return;
+    if (ctx.currentTime >= voice.impact - 0.05) return;
+    voice.stop(ctx.currentTime);
+    this.digVoice = null;
+    buildSting(ctx, this.master, this.digTool, ctx.currentTime + 0.03);
   }
 
   private silence(): void {

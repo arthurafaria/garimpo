@@ -124,8 +124,8 @@ metros = os da faixa (${TIERS[0].meters} a ${TIERS[TIERS.length - 1].meters})
 poço   = min(${MAX_DEPTH}, soma dos 7)`}</pre>
           <p>
             A resposta mais óbvia sempre rende {TIERS[0].meters} m, nunca zero — ninguém fica preso
-            na superfície. Chegar aos {MAX_DEPTH} m exige sete respostas na faixa mais rara (“uma em
-            um milhão”) — uma por pergunta, não uma sorte isolada. Cada faixa é um decil do acervo,
+            na superfície. Chegar aos {MAX_DEPTH} m exige sete respostas na faixa mais rara
+            (“lendária”) — uma por pergunta, não uma sorte isolada. Cada faixa é um decil do acervo,
             então toda pergunta oferece as seis.
           </p>
         </div>

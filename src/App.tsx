@@ -52,6 +52,8 @@ export default function App() {
   const [rounds, setRounds] = useState<RoundResult[]>([]);
   const [revealed, setRevealed] = useState(false);
   const [digging, setDigging] = useState(false);
+  /** The last dig played its find in the shaft (not skipped, motion allowed). */
+  const [dugFind, setDugFind] = useState(false);
   const [tool, setTool] = useState<ToolId>("pa");
   const [announce, setAnnounce] = useState("");
   const [result, setResult] = useState<Dive | null>(null);
@@ -165,8 +167,11 @@ export default function App() {
         rounds.reduce((total, item) => total + item.meters, 0),
       );
       const after = Math.min(700, before + meters);
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const animates = after > before && !reduce;
       setTool(tier.tool);
       setDigging(after > before);
+      setDugFind(Boolean(match) && animates);
       setAnnounce(
         match
           ? `Você encontrou ${tier.findName}. ${tier.toolName}, resposta ${tier.label}: ${match.answer.n}, mais ${meters} metros. Profundidade: ${after} metros.`
@@ -180,7 +185,8 @@ export default function App() {
       if (match) {
         audio.strike(match.answer.points);
         audio.crumble(meters);
-        if (tier.id >= 2) window.setTimeout(() => audio.gem(tier.id), 180);
+        // An animated dig rings its own find sting at the impact.
+        if (tier.id >= 2 && !animates) window.setTimeout(() => audio.gem(tier.id), 180);
       } else {
         audio.strike(1);
       }
@@ -253,7 +259,8 @@ export default function App() {
   }, [digging, next, revealed, screen]);
 
   const skipDig = useCallback(() => {
-    audio.stopDig();
+    audio.skipDig();
+    setDugFind(false);
     setDigging(false);
   }, [audio]);
 
@@ -368,7 +375,7 @@ export default function App() {
         tool={tool}
         digging={digging}
         marks={marks}
-        onDigStart={(ms) => audio.dig(tool, ms)}
+        onDigStart={(timing) => audio.dig(tool, timing)}
         onDigEnd={() => setDigging(false)}
       />
 
@@ -435,6 +442,7 @@ export default function App() {
                 depthAfter={depth}
                 onNext={next}
                 isLast={index + 1 >= prompts.length}
+                landed={dugFind}
               />
             ) : (
               <Round

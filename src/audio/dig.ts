@@ -10,6 +10,8 @@ export interface DigVoice {
   stop(at: number): void;
   /** Context time at which the voice ends on its own. */
   readonly end: number;
+  /** Context time of the impact (when the find sting plays). */
+  readonly impact: number;
 }
 
 const MASTER_LEVEL = 0.45;
@@ -227,8 +229,9 @@ function crunch(rig: Rig, at: number, weight: number): void {
 }
 
 function pa(rig: Rig, at: number, T: number): number {
-  for (let t = 0.02; t < T - 0.5; t += 0.26 * rand(0.9, 1.1)) crunch(rig, at + t, rand(0.85, 1));
-  const last = Math.max(0.02, T - 0.34);
+  for (let t = 0.02; t < T - 0.25; t += 0.2 * rand(0.9, 1.1)) crunch(rig, at + t, rand(0.85, 1));
+  // The heavy scoop lands on the impact.
+  const last = Math.max(0.02, T - 0.04);
   crunch(rig, at + last, 1.6);
   return at + last + 0.65;
 }
@@ -357,7 +360,7 @@ function escavadeira(rig: Rig, at: number, T: number): number {
 
   clank(rig, at + T * 0.36, 0.85);
   clank(rig, at + T * 0.66, 0.9);
-  const last = Math.max(0.1, T - 0.3);
+  const last = Math.max(0.1, T - 0.03);
   clank(rig, at + last, 1.15);
   return at + Math.max(T, last + 0.6) + 0.05;
 }
@@ -428,7 +431,8 @@ function broca(rig: Rig, at: number, T: number): number {
 /* --------------------------------------------------------- broca-ultra */
 
 function brocaUltra(rig: Rig, at: number, T: number): number {
-  const boomAt = at + Math.max(0.3, T - 0.42);
+  // The breakthrough boom is the impact.
+  const boomAt = at + Math.max(0.3, T);
   const pre = boomAt - at;
   brocaLayer(rig, at, boomAt, pre, 0.75, 0.04);
 
@@ -501,8 +505,9 @@ function brocaUltra(rig: Rig, at: number, T: number): number {
 
 /* ------------------------------------------------------------ dinamite */
 
-function dinamite(rig: Rig, at: number, T: number): number {
-  const boomAt = at + Math.max(0.35, Math.min(T - 0.3, 1.1));
+function dinamite(rig: Rig, at: number, T: number, lead: number): number {
+  // The fuse burns for the whole charge; the blast opens the descent.
+  const boomAt = at + Math.max(0.35, Math.min(T - 0.3, lead));
 
   // Fuse: thin, crackling hiss that brightens as it burns down.
   const fuseBand = rig.filter("bandpass", 3800, 1.4);
@@ -553,7 +558,74 @@ function dinamite(rig: Rig, at: number, T: number): number {
 
 /* ------------------------------------------------------------- builder */
 
-const BUILDERS: Record<ToolId, (rig: Rig, at: number, T: number) => number> = {
+/* --------------------------------------------------------- find sting */
+
+/** A bell-like note: a sine plus a soft upper partial. */
+function bell(rig: Rig, at: number, f: number, peak: number, decay: number, ratio = 2.01): void {
+  rig.osc("sine", f, at, at + decay + 0.1).connect(rig.hit(at, peak, decay, 0.004));
+  rig
+    .osc("sine", f * ratio, at, at + decay * 0.6 + 0.1)
+    .connect(rig.hit(at, peak * 0.4, decay * 0.6, 0.003));
+}
+
+/** High glassy ticks spread over `span` seconds. */
+function glitter(rig: Rig, at: number, span: number, count: number, peak: number): void {
+  for (let i = 0; i < count; i += 1) {
+    const t = at + (i / count) * span + rand(0, 0.03);
+    const f = rand(2600, 5200);
+    rig
+      .osc("sine", f, t, t + 0.16)
+      .connect(rig.hit(t, peak * rand(0.6, 1), rand(0.06, 0.12), 0.002));
+  }
+}
+
+/**
+ * The "you found it" sting at the impact, one per tool. Pitch rises with rarity:
+ * a dull knock for coal, a ping for iron, a warm ping for copper, a chime for
+ * gold, a sparkle run for the ruby and a long shimmer for the diamond.
+ */
+function sting(rig: Rig, at: number, tool: ToolId): number {
+  switch (tool) {
+    case "pa":
+      bell(rig, at, 392, 0.05, 0.16, 1.5);
+      return at + 0.3;
+    case "aspirador":
+      bell(rig, at, 523.25, 0.05, 0.32, 2.76);
+      return at + 0.45;
+    case "escavadeira":
+      bell(rig, at, 587.33, 0.05, 0.45, 2.4);
+      bell(rig, at + 0.07, 880, 0.03, 0.4);
+      return at + 0.6;
+    case "broca":
+      [659.25, 987.77, 1318.5].forEach((f, i) =>
+        bell(rig, at + i * 0.07, f, 0.045 - i * 0.006, 0.8),
+      );
+      glitter(rig, at + 0.12, 0.4, 4, 0.012);
+      return at + 1.05;
+    case "broca-ultra":
+      bell(rig, at, 783.99, 0.05, 0.9);
+      [1046.5, 1318.5, 1568, 2093, 2637, 3136].forEach((f, i) =>
+        bell(rig, at + 0.05 + i * 0.045, f, 0.022, 0.32, 2),
+      );
+      glitter(rig, at + 0.2, 0.7, 9, 0.012);
+      return at + 1.2;
+    default: {
+      // Diamond: wide detuned chord, slow bloom, glitter all the way up.
+      const chord = [1046.5, 1318.5, 1568, 2093];
+      chord.forEach((f, i) => {
+        const t = at + i * 0.06;
+        for (const detune of [-7, 7]) {
+          rig.osc("sine", f, t, t + 2.1, detune).connect(rig.hit(t, 0.016, 1.9, 0.05));
+        }
+      });
+      rig.osc("triangle", 261.63, at, at + 1.8).connect(rig.hit(at, 0.03, 1.5, 0.03));
+      glitter(rig, at + 0.1, 1.5, 16, 0.012);
+      return at + 2.4;
+    }
+  }
+}
+
+const BUILDERS: Record<ToolId, (rig: Rig, at: number, T: number, lead: number) => number> = {
   pa,
   aspirador,
   escavadeira,
@@ -577,31 +649,83 @@ const LEVELS: Record<ToolId, number> = {
   dinamite: 0.68,
 };
 
+/**
+ * Sting trim: sits a few dB under the loudest dig moments, so the find reads
+ * clearly over the tail of the dig without jumping out.
+ */
+const STING_LEVEL = 3;
+/**
+ * Per-find trim, measured like LEVELS (loudest 400 ms window, renderDig chain):
+ * the stings climb from about -34 dBFS (coal) to -26 dBFS (diamond), all under
+ * the dig itself (about -19 to -24 dBFS).
+ */
+const STING_TRIM: Record<ToolId, number> = {
+  pa: 4,
+  aspirador: 2.45,
+  escavadeira: 1.57,
+  broca: 0.97,
+  "broca-ultra": 1.24,
+  dinamite: 1,
+};
+
+/** Plays only the find sting for `tool` at `at` (used when the dig is skipped). */
+export function buildSting(
+  ctx: BaseAudioContext,
+  destination: AudioNode,
+  tool: ToolId,
+  at: number,
+): void {
+  const bus = ctx.createGain();
+  bus.gain.value = STING_LEVEL * STING_TRIM[tool];
+  bus.connect(destination);
+  sting(new Rig(ctx, bus), at, tool);
+}
+
+/**
+ * Dig sound for `tool`. `impactSec` is when the shaft stops on the find (the
+ * sting lands there); `leadSec` is the charge before the shaft moves (the
+ * dynamite's fuse). The voice rings on past the impact through the find.
+ */
 export function buildDig(
   ctx: BaseAudioContext,
   destination: AudioNode,
   tool: ToolId,
   startAt: number,
-  durationSec: number,
+  impactSec: number,
+  leadSec = 0,
 ): DigVoice {
   const bus = ctx.createGain();
   bus.gain.value = LEVELS[tool];
   bus.connect(destination);
   const rig = new Rig(ctx, bus);
-  const T = Math.max(0.6, durationSec);
-  const end = BUILDERS[tool](rig, startAt, T);
+  // The sting skips the per-tool trim so every find sits at the same level.
+  const stingBus = ctx.createGain();
+  stingBus.gain.value = STING_LEVEL * STING_TRIM[tool];
+  stingBus.connect(destination);
+  const stingRig = new Rig(ctx, stingBus);
+  const T = Math.max(0.3, impactSec);
+  const end = Math.max(
+    BUILDERS[tool](rig, startAt, T, leadSec),
+    sting(stingRig, startAt + T, tool),
+  );
   let stopped = false;
   return {
     end,
+    impact: startAt + T,
     stop(at: number) {
       if (stopped) return;
       stopped = true;
-      bus.gain.cancelScheduledValues(at);
-      bus.gain.setValueAtTime(bus.gain.value, at);
-      bus.gain.setTargetAtTime(0, at, 0.02);
-      rig.stopAll(at + 0.1);
-      if (typeof setTimeout === "function" && ctx instanceof AudioContext) {
-        setTimeout(() => rig.dispose(), 400);
+      for (const [b, r] of [
+        [bus, rig],
+        [stingBus, stingRig],
+      ] as const) {
+        b.gain.cancelScheduledValues(at);
+        b.gain.setValueAtTime(b.gain.value, at);
+        b.gain.setTargetAtTime(0, at, 0.02);
+        r.stopAll(at + 0.1);
+        if (typeof setTimeout === "function" && ctx instanceof AudioContext) {
+          setTimeout(() => r.dispose(), 400);
+        }
       }
     },
   };
@@ -618,7 +742,7 @@ export async function renderDig(
   const master = ctx.createGain();
   master.gain.value = MASTER_LEVEL;
   master.connect(createOutputChain(ctx, ctx.destination));
-  buildDig(ctx, master, tool, 0.01, durationMs / 1000);
+  buildDig(ctx, master, tool, 0.01, durationMs / 1000, tool === "dinamite" ? 1.38 : 0);
   return ctx.startRendering();
 }
 

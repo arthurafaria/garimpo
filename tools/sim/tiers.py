@@ -11,7 +11,7 @@ popularity inside the prompt). beta > 1 means "goes for the famous one":
 Targets for the simulated typical player:
   * most answers (>= 70 %) dig 10-30 m (Óbvia, Comum, Boa);
   * about 1 in 7 (12-17 %) digs 60 m or more;
-  * 100 m ("Uma em um milhão") is genuinely rare (<= 1.5 %);
+  * 100 m ("Lendária") is genuinely rare (<= 1.5 %);
   * the 3 most famous answers of every pool are always Óbvia.
 
     python3 tools/sim/tiers.py            (prints the grid winner and the table)
@@ -129,7 +129,7 @@ def main() -> int:
     print("cuts:", ", ".join(f"{c:.3f}" for c in cuts))
     print("| tier | metros | minRarity | % das respostas do jogador típico |")
     print("|---|---|---|---|")
-    labels = ["Óbvia", "Comum", "Boa", "Rara", "Raríssima", "Uma em um milhão"]
+    labels = ["Óbvia", "Comum", "Boa", "Rara", "Raríssima", "Lendária"]
     for label, meters, cut, share in zip(labels, METERS, cuts, m):
         print(f"| {label} | {meters} | {cut:.3f} | {share * 100:.1f} % |")
     print(f"10-30 m: {sum(m[:3]) * 100:.1f} %  ·  60 m+: {sum(m[3:]) * 100:.1f} % "

@@ -58,14 +58,14 @@ Dentro do acervo de cada pergunta, cada sinal vira um posto percentual; a
 raridade é `1 − média ponderada dos postos`. Depois a raridade escolhe uma de
 seis faixas fixas (cortes em `src/game/score.ts`, calibrados por `tools/dataset`):
 
-| Faixa            | Ferramenta  | Metros | Encontra    |
-| ---------------- | ----------- | ------ | ----------- |
-| Óbvia            | Pá          | 10     | carvão      |
-| Comum            | Aspirador   | 15     | ferro       |
-| Boa              | Escavadeira | 30     | cobre       |
-| Rara             | Broca       | 60     | ouro        |
-| Raríssima        | Broca ultra | 85     | um rubi     |
-| Uma em um milhão | Dinamite    | 100    | um diamante |
+| Faixa     | Ferramenta  | Metros | Encontra    |
+| --------- | ----------- | ------ | ----------- |
+| Óbvia     | Pá          | 10     | carvão      |
+| Comum     | Aspirador   | 15     | ferro       |
+| Boa       | Escavadeira | 30     | cobre       |
+| Rara      | Broca       | 60     | ouro        |
+| Raríssima | Broca ultra | 85     | um rubi     |
+| Lendária  | Dinamite    | 100    | um diamante |
 
 `poço = min(700, soma das 7)`: o fundo de 700 m exige sete respostas na faixa
 mais rara.

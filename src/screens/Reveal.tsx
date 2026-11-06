@@ -12,6 +12,8 @@ type Props = {
   depthAfter: number;
   onNext: () => void;
   isLast: boolean;
+  /** The find already burst out in the shaft: the panel settles instead of popping again. */
+  landed?: boolean;
 };
 
 /** Reads the measured rarity defensively: the field is what the build writes. */
@@ -48,7 +50,7 @@ function sparkles(count: number) {
 }
 
 /** "Você encontrou …": the big line under each answer, with the mineral it turned up. */
-function Find({ tier, meters }: { tier: Tier | null; meters: number }) {
+function Find({ tier, meters, landed }: { tier: Tier | null; meters: number; landed: boolean }) {
   if (!tier) {
     return (
       <div className="find" data-tier="0">
@@ -60,7 +62,7 @@ function Find({ tier, meters }: { tier: Tier | null; meters: number }) {
   const count = SPARKLES[tier.id] ?? 0;
   const exclaim = tier.id >= 4 ? "!" : "";
   return (
-    <div className="find" data-tier={tier.id}>
+    <div className="find" data-tier={tier.id} data-landed={landed}>
       <span className="find-art" aria-hidden="true">
         <PixelSprite sprite={MINERALS[tier.find].sprite} scale={4} />
         {sparkles(count).map((spark, i) => (
@@ -97,7 +99,15 @@ function normalizer(prompt: Prompt, pick: (answer: Answer) => number) {
   };
 }
 
-export function Reveal({ prompt, round, depthBefore, depthAfter, onNext, isLast }: Props) {
+export function Reveal({
+  prompt,
+  round,
+  depthBefore,
+  depthAfter,
+  onNext,
+  isLast,
+  landed = false,
+}: Props) {
   const matched = round.matched;
   const matchedRarity = rarityOf(matched);
   const tier = tierForRarity(matchedRarity);
@@ -131,7 +141,7 @@ export function Reveal({ prompt, round, depthBefore, depthAfter, onNext, isLast 
             {matched.n !== round.guess ? `no acervo: ${matched.n}` : "no acervo"}
           </p>
 
-          <Find tier={tier} meters={round.meters} />
+          <Find tier={tier} meters={round.meters} landed={landed} />
 
           <hr />
 
@@ -178,7 +188,7 @@ export function Reveal({ prompt, round, depthBefore, depthAfter, onNext, isLast 
           <p className="canonical">
             {round.timedOut ? "sem resposta" : "não está no acervo desta pergunta"}
           </p>
-          <Find tier={null} meters={0} />
+          <Find tier={null} meters={0} landed={false} />
           <hr />
           <p className="compare" style={{ marginTop: 0 }}>
             {round.timedOut ? (

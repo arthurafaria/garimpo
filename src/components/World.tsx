@@ -12,6 +12,7 @@ import {
   type MineralId,
   type ToolId,
 } from "../art/sprites.ts";
+import { digTimingFor, tierForTool, type DigTiming } from "../game/score.ts";
 import { STRATA, stratumForDepth } from "../game/strata.ts";
 
 /**
@@ -48,19 +49,54 @@ type Props = {
   /** The app's dig flag; turning it off mid-animation skips to the end. */
   digging: boolean;
   marks: WorldMark[];
-  /** Called once when a dig animation starts, with its real total duration. */
-  onDigStart?: (durationMs: number) => void;
+  /** Called once when a dig animation starts, with its real timeline. */
+  onDigStart?: (timing: DigTiming) => void;
   /** Called when the dig finished (also right away when nothing moved). */
   onDigEnd?: () => void;
 };
 
-/** Timing of one dig. Bigger digs take longer, but never drag. */
-function digTiming(metres: number) {
-  const windUp = 250;
-  const travel = Math.min(1600, 500 + metres * 10);
-  const settle = 260;
-  return { windUp, travel, settle, total: windUp + travel + settle };
+/**
+ * Descent curve per tier. The shovel scoops (fast start, soft landing); the
+ * machines pick up speed and stop hard on the find; the blast throws the shaft
+ * down and brakes into the slow-motion beat.
+ */
+function descent(tierId: number): (k: number) => number {
+  if (tierId <= 1) return (k) => 1 - (1 - k) * (1 - k);
+  if (tierId === 2) return (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+  if (tierId >= 6) return (k) => 1 - Math.pow(1 - k, 3);
+  const power = 1.6 + (tierId - 3) * 0.3;
+  return (k) => Math.pow(k, power);
 }
+
+type Bit = { dx: number; dy: number; size: number; delay: number };
+
+/** Deterministic burst particles: `count` bits flung up and out from the find. */
+function burst(count: number, reach: number, seed: number): Bit[] {
+  const rand = rng(seed);
+  return Array.from({ length: count }, (_, i) => {
+    // Mostly upward fan, a few low ones skidding along the floor.
+    const angle = -Math.PI / 2 + ((i / count) * 2 - 1) * (Math.PI * 0.62) + (rand() - 0.5) * 0.3;
+    const distance = reach * (0.45 + rand() * 0.55);
+    return {
+      dx: Math.round(Math.cos(angle) * distance),
+      dy: Math.round(Math.sin(angle) * distance),
+      size: rand() > 0.7 ? 6 : 4,
+      delay: Math.round(rand() * 90),
+    };
+  });
+}
+
+/** Particles per tier: a pinch of coal dust up to a diamond shower. */
+const SPARKS: Record<number, Bit[]> = {
+  1: burst(6, 60, 3),
+  2: burst(10, 90, 5),
+  3: burst(14, 120, 7),
+  4: burst(20, 150, 9),
+  5: burst(30, 190, 13),
+  6: burst(40, 230, 17),
+};
+/** Rock thrown by the dynamite blast. */
+const DEBRIS = burst(22, 260, 23).map((bit) => ({ ...bit, size: bit.size + 4 }));
 
 const ACCENT: Record<MineralId, string> = {
   carvao: "#5a5350",
@@ -255,6 +291,15 @@ const Scenery = memo(function Scenery() {
   );
 });
 
+function bitStyle(bit: Bit) {
+  return {
+    ["--dx" as string]: `${bit.dx}px`,
+    ["--dy" as string]: `${bit.dy}px`,
+    ["--s" as string]: `${bit.size}px`,
+    ["--d" as string]: `${bit.delay}ms`,
+  };
+}
+
 /** The digging tool; both frames are drawn and CSS alternates them. */
 const Digger = memo(function Digger({ tool }: { tool: ToolId }) {
   const frames = TOOLS[tool].frames;
@@ -275,7 +320,15 @@ export function World({ mode, depth, tool, digging, marks, onDigStart, onDigEnd 
   const gauge = useRef<HTMLElement | null>(null);
   const shown = useRef(0);
   const anim = useRef<{ raf: number; to: number } | null>(null);
+  const root = useRef<HTMLDivElement | null>(null);
+  const count = useRef<HTMLElement | null>(null);
   const [active, setActive] = useState(false);
+  /** Metres the running dig adds (for the "+N m" pop). */
+  const [dug, setDug] = useState(0);
+  const toolRef = useRef(tool);
+  useEffect(() => {
+    toolRef.current = tool;
+  }, [tool]);
 
   const startRef = useRef(onDigStart);
   const endRef = useRef(onDigEnd);
@@ -297,6 +350,18 @@ export function World({ mode, depth, tool, digging, marks, onDigStart, onDigEnd 
     if (tagLayer.current)
       tagLayer.current.textContent = stratumForDepth(Math.min(699, whole)).label;
     if (gauge.current) gauge.current.style.top = `${(metres / MAX) * 100}%`;
+  };
+  /** Marks the dig phase on the world root; null clears it (and the fuse flicker). */
+  const setPhase = (phase: "charge" | "travel" | "find" | null) => {
+    const el = root.current;
+    if (!el) return;
+    if (phase === null) {
+      delete el.dataset.phase;
+      delete el.dataset.blink;
+      el.style.removeProperty("--k");
+    } else if (el.dataset.phase !== phase) {
+      el.dataset.phase = phase;
+    }
   };
   /** Moves the camera so `y` px of the world sits on the focus line. */
   const paintCamera = (y: number) => {
@@ -351,18 +416,41 @@ export function World({ mode, depth, tool, digging, marks, onDigStart, onDigEnd 
       return () => window.clearTimeout(timer);
     }
 
-    const { windUp, travel, total } = digTiming(to - from);
+    // Charge → travel → impact + find. Phases are written straight to the DOM
+    // (data-phase, --k) and CSS draws the rest.
+    const tierId = tierForTool(toolRef.current).id;
+    const timing = digTimingFor(tierId);
+    const { charge, travel, total } = timing;
+    const impact = charge + travel;
+    const ease = descent(tierId);
+    const el = root.current;
     const start = performance.now();
-    const ease = (t: number) => 1 - Math.pow(1 - t, 3);
     setActive(true);
-    startRef.current?.(total);
+    setDug(to - from);
+    startRef.current?.(timing);
     const step = (now: number) => {
       const t = now - start;
-      if (t >= windUp) {
-        const k = Math.min(1, (t - windUp) / travel);
+      if (t < charge) {
+        const k = t / charge;
+        setPhase("charge");
+        el?.style.setProperty("--k", k.toFixed(3));
+        if (tierId === 6 && el) {
+          // Fuse: countdown and a flicker that speeds up as it burns down.
+          if (count.current) count.current.textContent = String(3 - Math.min(2, Math.floor(k * 3)));
+          el.dataset.blink = String(Math.floor(18 * k * k) % 2);
+        }
+      } else if (t < impact) {
+        setPhase("travel");
+        const k = Math.min(1, (t - charge) / travel);
         const value = from + (to - from) * ease(k);
         paintShaft(value);
         paintCamera(SKY + value * PX);
+      } else if (t < total) {
+        if (el?.dataset.phase !== "find") {
+          paintShaft(to);
+          paintCamera(SKY + to * PX);
+          setPhase("find");
+        }
       }
       if (t < total) {
         anim.current = { raf: requestAnimationFrame(step), to };
@@ -370,15 +458,18 @@ export function World({ mode, depth, tool, digging, marks, onDigStart, onDigEnd 
         anim.current = null;
         paintShaft(to);
         paintCamera(SKY + to * PX);
+        setPhase(null);
         setActive(false);
         endRef.current?.();
       }
     };
     anim.current = { raf: requestAnimationFrame(step), to };
     return () => {
-      // Stopping mid-dig keeps the current depth, so a re-run continues from here.
+      // Only cancel: stopping mid-dig keeps the current depth, so a re-run
+      // (React StrictMode, a new depth) continues from here.
       if (anim.current) cancelAnimationFrame(anim.current.raf);
       anim.current = null;
+      setPhase(null);
       setActive(false);
     };
   }, [depth, kind]);
@@ -391,6 +482,7 @@ export function World({ mode, depth, tool, digging, marks, onDigStart, onDigEnd 
     anim.current = null;
     paintShaft(to);
     paintCamera(SKY + to * PX);
+    setPhase(null);
     setActive(false);
   }, [digging]);
 
@@ -412,9 +504,17 @@ export function World({ mode, depth, tool, digging, marks, onDigStart, onDigEnd 
   }, [kind]);
 
   const toolName = TOOLS[tool].name;
+  const tier = tierForTool(tool);
 
   return (
-    <div className="world" data-mode={mode} data-active={active} aria-hidden="true">
+    <div
+      className="world"
+      ref={root}
+      data-mode={mode}
+      data-active={active}
+      data-tier={tier.id}
+      aria-hidden="true"
+    >
       <div className="world-track" ref={track} style={{ height: WORLD }}>
         <Scenery />
 
@@ -441,6 +541,43 @@ export function World({ mode, depth, tool, digging, marks, onDigStart, onDigEnd 
           {kind !== "surface" && (
             <div className="w-digger" data-tool={tool}>
               <Digger tool={tool} />
+            </div>
+          )}
+          {active && (
+            <div className="w-fx" data-tier={tier.id}>
+              <i className="w-dim" />
+              <i className="w-flash" />
+              <i className="w-ring" />
+              {tier.id === 6 && (
+                <>
+                  <i className="w-blast" />
+                  <i className="w-fuse" />
+                  <b className="w-count" ref={count}>
+                    3
+                  </b>
+                  <div className="w-debris">
+                    {DEBRIS.map((bit, i) => (
+                      <i key={i} style={bitStyle(bit)} />
+                    ))}
+                  </div>
+                </>
+              )}
+              {tier.id >= 6 && <i className="w-rays" />}
+              <div className="w-sparks">
+                {(SPARKS[tier.id] ?? SPARKS[1]).map((bit, i) => (
+                  <i key={i} style={bitStyle(bit)} />
+                ))}
+              </div>
+              <div className="w-find">
+                <PixelSprite sprite={MINERALS[tier.find].sprite} scale={4} />
+                {tier.id === 4 || tier.id === 5 ? (
+                  <>
+                    <i className="w-glint" />
+                    <i className="w-glint w-glint-b" />
+                  </>
+                ) : null}
+              </div>
+              {dug > 0 && <em className="w-plus">+{dug} m</em>}
             </div>
           )}
           {active && (

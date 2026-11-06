@@ -3559,7 +3559,7 @@ body {
   color: #6b3d16;
 }
 
-/* Dinamite in the world: warm glow and a short camera shake on the boom. */
+/* Dinamite in the world: warm glow (the blast itself lives in "a escavação"). */
 .world:has(.w-digger[data-tool="dinamite"]) .w-glow {
   background: radial-gradient(
     circle,
@@ -3567,9 +3567,6 @@ body {
     rgba(255, 120, 60, 0.07) 42%,
     transparent 68%
   );
-}
-.world[data-active="true"]:has(.w-digger[data-tool="dinamite"]) {
-  animation: blast-shake 560ms steps(10, end) 1050ms 1 both;
 }
 @keyframes blast-shake {
   0% {
@@ -3781,7 +3778,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .world[data-active="true"]:has(.w-digger[data-tool="dinamite"]),
   .find-art svg,
   .find-art i {
     animation: none !important;
@@ -3791,7 +3787,7 @@ body {
   }
 }
 
-/* Long tier names ("Uma em um milhão") wrap instead of covering the answer. */
+/* Long tier names ("Lendária") wrap instead of covering the answer. */
 .digcard-tier {
   max-width: 8.5em;
   line-height: 1.25;
@@ -3820,4 +3816,635 @@ body {
   display: block;
   font-size: 11px;
   opacity: 0.75;
+}
+
+/* ==========================================================================
+   A escavação: carga → descida → impacto → achado
+   Phases come from World.tsx (data-phase on .world, --k = charge 0→1);
+   timings mirror digTimingFor() in src/game/score.ts.
+   ========================================================================== */
+.world {
+  --amp: 1px;
+  --fx: #8f8274;
+  --fx-2: #5a5350;
+  --fx-hi: #b8ada0;
+}
+.world[data-tier="2"] {
+  --amp: 1.5px;
+  --fx: #e4ddd0;
+  --fx-2: #a65a44;
+  --fx-hi: #ffffff;
+}
+.world[data-tier="3"] {
+  --amp: 2px;
+  --fx: #f2a35a;
+  --fx-2: #d4834f;
+  --fx-hi: #ffe0b8;
+}
+.world[data-tier="4"] {
+  --amp: 3px;
+  --fx: #ffd76a;
+  --fx-2: #f2b65a;
+  --fx-hi: #fff7d6;
+}
+.world[data-tier="5"] {
+  --amp: 4px;
+  --fx: #ff4a64;
+  --fx-2: #d8344f;
+  --fx-hi: #ffd0d8;
+}
+.world[data-tier="6"] {
+  --amp: 2px;
+  --fx: #9ffcf2;
+  --fx-2: #2fd4c8;
+  --fx-hi: #ffffff;
+}
+
+/* charge: the tool revs up, shaking harder and glowing brighter */
+.world[data-phase="charge"] .w-digger {
+  animation: rev 70ms steps(2, end) infinite;
+}
+@keyframes rev {
+  0% {
+    translate: calc(var(--k, 0) * var(--amp) * -1) 0;
+  }
+  50% {
+    translate: calc(var(--k, 0) * var(--amp)) calc(var(--k, 0) * var(--amp) * 0.5);
+  }
+}
+.world[data-phase="charge"] .w-glow {
+  scale: calc(1 + var(--k, 0) * 0.35);
+  opacity: calc(0.7 + var(--k, 0) * 0.6);
+}
+.world[data-phase="charge"][data-tier="5"] .world-track {
+  translate: calc(var(--k, 0) * 1px) 0;
+  animation: rumble 90ms steps(2, end) infinite;
+}
+@keyframes rumble {
+  50% {
+    translate: calc(var(--k, 0) * -2px) calc(var(--k, 0) * 1px);
+  }
+}
+
+/* travel: the machines speed up; the blast hides the stick */
+.world[data-tier="6"][data-phase="travel"] .w-digger,
+.world[data-tier="6"][data-phase="find"] .w-digger {
+  opacity: 0;
+}
+.world[data-phase="find"] .w-dirt {
+  display: none;
+}
+.world[data-phase="find"] .w-digger,
+.world[data-phase="find"] .w-digger .f0,
+.world[data-phase="find"] .w-digger .f1 {
+  animation: none;
+}
+.world[data-phase="find"] .w-digger {
+  translate: 0 4px;
+  transition: translate 120ms steps(2, end);
+}
+
+/* the effect layer rides with the shaft face */
+.w-fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.w-fx > *,
+.w-find,
+.w-sparks,
+.w-debris {
+  position: absolute;
+}
+.w-dim {
+  left: -2000px;
+  top: -2000px;
+  width: 4000px;
+  height: 4000px;
+  background: radial-gradient(circle at 50% 49%, transparent 4%, rgba(4, 3, 2, 0.6) 22%);
+  opacity: 0;
+}
+.w-flash {
+  left: -700px;
+  top: -840px;
+  width: 1400px;
+  height: 1400px;
+  background: radial-gradient(
+    circle,
+    var(--fx-hi) 0,
+    color-mix(in srgb, var(--fx) 70%, transparent) 9%,
+    color-mix(in srgb, var(--fx) 22%, transparent) 26%,
+    transparent 52%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+.w-ring {
+  left: -10px;
+  top: -142px;
+  width: 20px;
+  height: 20px;
+  box-shadow:
+    0 0 0 4px var(--fx),
+    0 0 0 8px color-mix(in srgb, var(--fx) 40%, transparent);
+  opacity: 0;
+}
+.w-find {
+  left: 0;
+  top: -132px;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  opacity: 0;
+  filter: drop-shadow(0 0 10px var(--fx)) drop-shadow(0 0 2px var(--fx-hi));
+}
+.w-find svg {
+  display: block;
+  width: 64px;
+  height: 64px;
+}
+.w-sparks {
+  left: 0;
+  top: -20px;
+}
+.w-sparks i,
+.w-debris i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--s);
+  height: var(--s);
+  margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  background: var(--fx);
+  box-shadow: 0 0 0 1px rgba(11, 7, 5, 0.7);
+  opacity: 0;
+}
+.w-sparks i:nth-child(3n) {
+  background: var(--fx-hi);
+}
+.w-sparks i:nth-child(3n + 1) {
+  background: var(--fx-2);
+}
+.w-fx[data-tier="1"] .w-sparks i,
+.w-fx[data-tier="2"] .w-sparks i:nth-child(2n) {
+  background: #6b5038;
+}
+.w-plus {
+  right: calc(var(--hole-w) / 2 + 18px);
+  top: -96px;
+  font: 700 22px/1 var(--f-pixel);
+  font-style: normal;
+  color: var(--fx);
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 10px color-mix(in srgb, var(--fx) 60%, transparent);
+  white-space: nowrap;
+  opacity: 0;
+}
+
+/* impact + find (all tiers; amounts scale by tier below) */
+.world[data-phase="find"] .w-flash {
+  animation: flash var(--flash-ms, 360ms) steps(6, end) both;
+}
+.world[data-phase="find"] .w-find {
+  animation: find-burst var(--burst-ms, 420ms) steps(7, end) both;
+}
+.world[data-phase="find"] .w-sparks i {
+  animation: spark-fly var(--spark-ms, 520ms) steps(8, end) var(--d) both;
+}
+.world[data-phase="find"] .w-plus {
+  animation: plus-up var(--plus-ms, 600ms) steps(6, end) 60ms both;
+}
+.world[data-phase="find"] .w-tag b {
+  animation: tag-pop 300ms steps(3, end) both;
+}
+@keyframes flash {
+  0% {
+    opacity: 0;
+    scale: 0.5;
+  }
+  12% {
+    opacity: var(--flash-peak, 0.55);
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.15;
+  }
+}
+@keyframes find-burst {
+  0% {
+    opacity: 0;
+    transform: translateY(124px) scale(0.2);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-14px) scale(var(--pop, 1.2));
+  }
+  55% {
+    transform: translateY(4px) scale(0.92);
+  }
+  75% {
+    transform: translateY(-2px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(var(--dx), var(--dy));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) * 1.12), calc(var(--dy) * 0.8 + 46px));
+  }
+}
+@keyframes plus-up {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(0) scale(1.15);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+}
+@keyframes tag-pop {
+  50% {
+    scale: 1.25;
+    color: var(--fx-hi);
+  }
+}
+@keyframes ring-out {
+  0% {
+    opacity: 1;
+    scale: 0.4;
+  }
+  100% {
+    opacity: 0;
+    scale: var(--ring, 8);
+  }
+}
+@keyframes impact-shake {
+  0% {
+    translate: 0 0;
+  }
+  15% {
+    translate: calc(var(--sx) * -1) calc(var(--sx) * 0.7);
+  }
+  30% {
+    translate: var(--sx) calc(var(--sx) * -0.8);
+  }
+  50% {
+    translate: calc(var(--sx) * -0.6) calc(var(--sx) * 0.4);
+  }
+  70% {
+    translate: calc(var(--sx) * 0.4) calc(var(--sx) * -0.3);
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+/* Pá: a modest scoop */
+.world[data-tier="1"] {
+  --flash-peak: 0.18;
+  --flash-ms: 220ms;
+  --burst-ms: 220ms;
+  --spark-ms: 260ms;
+  --plus-ms: 230ms;
+  --pop: 1.08;
+}
+.world[data-tier="1"] .w-find {
+  top: -114px;
+  scale: 0.75;
+}
+.world[data-tier="2"] {
+  --flash-peak: 0.3;
+  --flash-ms: 300ms;
+  --burst-ms: 300ms;
+  --spark-ms: 340ms;
+  --plus-ms: 320ms;
+  --pop: 1.12;
+}
+.world[data-tier="3"] {
+  --flash-peak: 0.42;
+  --flash-ms: 380ms;
+  --burst-ms: 380ms;
+  --spark-ms: 440ms;
+  --plus-ms: 460ms;
+  --pop: 1.2;
+  --ring: 7;
+  --sx: 2px;
+}
+.world[data-tier="4"] {
+  --flash-peak: 0.6;
+  --flash-ms: 520ms;
+  --burst-ms: 480ms;
+  --spark-ms: 620ms;
+  --plus-ms: 720ms;
+  --pop: 1.3;
+  --ring: 10;
+  --sx: 3px;
+}
+.world[data-tier="5"] {
+  --flash-peak: 0.78;
+  --flash-ms: 640ms;
+  --burst-ms: 560ms;
+  --spark-ms: 800ms;
+  --plus-ms: 1000ms;
+  --pop: 1.4;
+  --ring: 16;
+  --sx: 5px;
+}
+.world[data-phase="find"][data-tier="3"] .w-ring,
+.world[data-phase="find"][data-tier="4"] .w-ring,
+.world[data-phase="find"][data-tier="5"] .w-ring {
+  animation: ring-out 420ms steps(6, end) both;
+}
+.world[data-phase="find"][data-tier="3"] .world-track,
+.world[data-phase="find"][data-tier="4"] .world-track,
+.world[data-phase="find"][data-tier="5"] .world-track {
+  animation: impact-shake 300ms steps(6, end) both;
+}
+.world[data-phase="find"][data-tier="5"] .w-flash {
+  /* the ruby flashes twice: hit, then its own red pulse */
+  animation:
+    flash 300ms steps(5, end) both,
+    flash 420ms steps(6, end) 240ms both;
+}
+.world[data-tier="4"] .w-find svg,
+.world[data-tier="5"] .w-find svg {
+  scale: 1.15;
+}
+
+/* gold glint / ruby sparkle: pixel four-point stars on the stone */
+.w-glint {
+  position: absolute;
+  left: 52px;
+  top: 6px;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  box-shadow:
+    0 -4px 0 #fff,
+    0 4px 0 #fff,
+    -4px 0 0 #fff,
+    4px 0 0 #fff,
+    0 -8px 0 var(--fx-hi),
+    0 8px 0 var(--fx-hi),
+    -8px 0 0 var(--fx-hi),
+    8px 0 0 var(--fx-hi);
+  opacity: 0;
+}
+.w-glint-b {
+  left: 8px;
+  top: 44px;
+}
+.world[data-phase="find"] .w-glint {
+  animation: glint 360ms steps(4, end) 240ms both;
+}
+.world[data-phase="find"] .w-glint-b {
+  animation-delay: 420ms;
+}
+@keyframes glint {
+  0%,
+  100% {
+    opacity: 0;
+    scale: 0.2;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.2;
+  }
+}
+
+/* Dinamite: fuse + countdown, blast, then a slow-motion diamond with rays */
+.world[data-tier="6"] {
+  --flash-peak: 0.7;
+  --flash-ms: 900ms;
+  --burst-ms: 1600ms;
+  --spark-ms: 1300ms;
+  --plus-ms: 1600ms;
+  --pop: 1.25;
+  --sx: 3px;
+}
+.w-fuse {
+  left: 18px;
+  top: -100px;
+  width: 6px;
+  height: 6px;
+  background: #fffbe8;
+  box-shadow:
+    0 0 0 2px #ffe066,
+    0 0 14px 6px rgba(255, 160, 60, 0.75);
+  opacity: 0;
+}
+.w-count {
+  right: calc(var(--hole-w) / 2 + 18px);
+  top: -120px;
+  text-align: right;
+  font: 700 48px/1 var(--f-pixel);
+  color: #ffe066;
+  text-shadow:
+    3px 3px 0 #000,
+    0 0 16px rgba(255, 120, 60, 0.8);
+  opacity: 0;
+}
+.world[data-phase="charge"] .w-fuse,
+.world[data-phase="charge"] .w-count {
+  opacity: 1;
+}
+.world[data-phase="charge"][data-blink="1"] .w-fuse {
+  opacity: 0.35;
+  scale: 0.6;
+}
+.world[data-phase="charge"][data-blink="1"] .w-count {
+  color: #ff7a3c;
+}
+.world[data-phase="charge"][data-tier="6"] .w-glow {
+  opacity: calc(0.6 + var(--k, 0) * 0.5);
+}
+.world[data-phase="charge"][data-tier="6"][data-blink="1"] .w-glow {
+  opacity: 0.3;
+}
+.w-blast {
+  left: -1600px;
+  top: -1600px;
+  width: 3200px;
+  height: 3200px;
+  background: radial-gradient(
+    circle,
+    #fffbe8 0,
+    rgba(255, 210, 120, 0.95) 8%,
+    rgba(255, 120, 60, 0.7) 20%,
+    rgba(200, 50, 30, 0.25) 38%,
+    transparent 60%
+  );
+  opacity: 0;
+}
+.world[data-phase="travel"] .w-blast {
+  animation: blast 640ms steps(8, end) both;
+}
+@keyframes blast {
+  0% {
+    opacity: 1;
+    scale: 0.3;
+  }
+  20% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.2;
+  }
+}
+.w-debris {
+  left: 0;
+  top: -10px;
+}
+.w-debris i {
+  background: #8a6640;
+}
+.w-debris i:nth-child(3n) {
+  background: #f28a2a;
+}
+.w-debris i:nth-child(4n) {
+  background: #c8312b;
+}
+.world[data-phase="travel"] .w-debris i {
+  animation: spark-fly 700ms steps(9, end) var(--d) both;
+}
+.world[data-phase="travel"][data-tier="6"] .world-track {
+  --sx: 10px;
+  animation: impact-shake 620ms steps(10, end) both;
+}
+/* the beat: everything dims, holds, then the diamond rises slowly */
+.world[data-phase="find"][data-tier="6"] .w-dim {
+  animation: beat-dim 2100ms linear both;
+}
+@keyframes beat-dim {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+.world[data-phase="find"][data-tier="6"] .w-flash {
+  animation-delay: 260ms;
+}
+.world[data-tier="6"] .w-find {
+  top: -96px;
+}
+.world[data-tier="6"] .w-rays {
+  top: -326px;
+}
+.world[data-phase="find"][data-tier="6"] .w-find {
+  animation: diamond-rise 1700ms cubic-bezier(0.16, 0.8, 0.3, 1) 220ms both;
+}
+@keyframes diamond-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(130px) scale(0.3);
+  }
+  10% {
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(-6px) scale(1.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.35);
+  }
+}
+.world[data-phase="find"][data-tier="6"] .w-sparks i {
+  animation-delay: calc(var(--d) * 3 + 280ms);
+}
+.world[data-phase="find"][data-tier="6"] .w-plus {
+  animation-delay: 700ms;
+}
+.world[data-phase="find"][data-tier="6"] .world-track {
+  animation: impact-shake 360ms steps(6, end) 240ms both;
+}
+.w-rays {
+  left: -230px;
+  top: -380px;
+  width: 460px;
+  height: 460px;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(159, 252, 242, 0.42) 0deg 7deg,
+    transparent 7deg 30deg
+  );
+  mask: radial-gradient(circle, #000 18%, transparent 68%);
+  opacity: 0;
+}
+.world[data-phase="find"] .w-rays {
+  animation: rays 1900ms ease-out 300ms both;
+}
+@keyframes rays {
+  0% {
+    opacity: 0;
+    rotate: 0deg;
+    scale: 0.4;
+  }
+  35% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0.55;
+    rotate: 48deg;
+    scale: 1.1;
+  }
+}
+
+/* Reveal after a played dig: the stone was just found, so it settles
+   (afterglow) instead of popping in a second time. */
+.find[data-landed="true"] .find-art svg {
+  animation: find-settle 520ms steps(5, end) both;
+}
+@keyframes find-settle {
+  0% {
+    transform: scale(1.25);
+    filter: brightness(1.6) drop-shadow(0 0 18px rgba(255, 244, 214, 0.9));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w-fx,
+  .w-fx *,
+  .world[data-phase] .world-track,
+  .world[data-phase] .w-digger,
+  .find[data-landed="true"] .find-art svg {
+    animation: none !important;
+  }
+  .w-fx {
+    display: none;
+  }
 }

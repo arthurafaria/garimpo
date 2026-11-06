@@ -1,0 +1,261 @@
+{
+  "off": {
+    "Kuat": {
+      "count": 3,
+      "ex": [
+        "Refrigerante Guaraná Kuat Garrafa 3l",
+        "Refrigerante Guaraná Kuat Lata 220ml",
+        "Kuat Garrafa Pet 1,5 L"
+      ],
+      "err": null
+    },
+    "Toddy": {
+      "count": 18,
+      "ex": ["ACHOC PO TODDY", "Toddy Original 750g", "Toddy Light"],
+      "err": null
+    },
+    "Toddynho": {
+      "count": 0,
+      "ex": [],
+      "err": null
+    },
+    "Trakinas": {
+      "count": 2,
+      "ex": [
+        "Biscoito recheado sabor chocolate e chocolate branco",
+        "Biscoito Recheio Morango Trakinas Pacote 126g"
+      ],
+      "err": null
+    },
+    "Club Social": {
+      "count": 17,
+      "ex": [
+        "Bolacha Salgada Sabor Cebola com Sour Cream",
+        null,
+        "Pack Biscoito Integral Tradicional Club Social Pacote 288g 12 Unidades Embalagem Econômica Leve Mais Pague Menos"
+      ],
+      "err": null
+    },
+    "Passatempo": {
+      "count": 7,
+      "ex": [
+        "Cookie original + Trento Duo",
+        "Biscoito Wafer Recheio Chocolate Passatempo Pacote 20g",
+        ""
+      ],
+      "err": null
+    },
+    "Negresco": {
+      "count": 9,
+      "ex": [
+        "Biscoito Chocolate Recheio Baunilha Negresco Pacote 100g",
+        "Biscoito Chocolate Recheio Sorvete De Morango Negresco Pacote 100g",
+        "Cappuccino Solúvel Negresco Nescafé Lata 180g"
+      ],
+      "err": null
+    },
+    "Guaravita": {
+      "count": 1,
+      "ex": ["Guaravita acai"],
+      "err": null
+    },
+    "Xereta": {
+      "count": 1,
+      "ex": ["Refrigerante Xereta maça"],
+      "err": null
+    },
+    "Frisante": {
+      "count": 0,
+      "ex": [],
+      "err": null
+    },
+    "Teem": {
+      "count": 0,
+      "ex": [],
+      "err": null
+    },
+    "H2OH": {
+      "count": 1,
+      "ex": ["H2oh Citrus 500"],
+      "err": null
+    },
+    "Schin": {
+      "count": 0,
+      "ex": [],
+      "err": null
+    },
+    "São Geraldo": {
+      "count": null,
+      "ex": [],
+      "err": "HTTP Error 503: Service Temporarily Unavailable"
+    },
+    "Sazón": {
+      "count": 6,
+      "ex": [
+        "Tempero Para Legumes Sazón Pacote 40g 8 Unidades",
+        "Tempero Para Pipoca Churrasco Sazón Pacote 60g 12 Unidades",
+        "Caldo Pó Carne Sazón Lev Caixa 32,5g 5 Unidades"
+      ],
+      "err": null
+    },
+    "Maggi": {
+      "count": 41,
+      "ex": [
+        "Preparado para caldo de galinha",
+        "Caldo tablete Maggi 114g menos sódio Carne",
+        "Caldo Tablete Legumes Maggi Caixa 57g 6 Unidades"
+      ],
+      "err": null
+    },
+    "Omo": {
+      "count": 0,
+      "ex": [],
+      "err": null
+    },
+    "Fanta": {
+      "count": 37,
+      "ex": [
+        "Refrigerante Laranja Fanta Garrafa 2l",
+        "Refrigerante Laranja Fanta Lata 350ml",
+        "Refrigerante Laranja Fanta Garrafa 200ml"
+      ],
+      "err": null
+    },
+    "Pakera": {
+      "count": 0,
+      "ex": [],
+      "err": null
+    },
+    "Itubaína": {
+      "count": null,
+      "ex": [],
+      "err": "HTTP Error 503: Service Temporarily Unavailable"
+    }
+  },
+  "wikt": {
+    "cafezinho": {
+      "exists": false,
+      "cats": []
+    },
+    "café com leite": {
+      "exists": true,
+      "cats": []
+    },
+    "pistola": {
+      "exists": true,
+      "cats": ["Coloquialismo (Português)", "Português brasileiro"]
+    },
+    "hater": {
+      "exists": true,
+      "cats": []
+    },
+    "mungunzá": {
+      "exists": false,
+      "cats": []
+    },
+    "macaxeira": {
+      "exists": true,
+      "cats": ["Português brasileiro"]
+    },
+    "churros": {
+      "exists": false,
+      "cats": []
+    },
+    "brownie": {
+      "exists": true,
+      "cats": []
+    },
+    "lacrar": {
+      "exists": true,
+      "cats": ["Gíria (Português)"]
+    },
+    "tankar": {
+      "exists": true,
+      "cats": []
+    },
+    "cringe": {
+      "exists": true,
+      "cats": ["Gíria (Inglês)"]
+    },
+    "biscoiteiro": {
+      "exists": true,
+      "cats": []
+    },
+    "gado": {
+      "exists": true,
+      "cats": ["Gíria (Português)", "Português brasileiro"]
+    },
+    "mitar": {
+      "exists": true,
+      "cats": []
+    },
+    "flopar": {
+      "exists": true,
+      "cats": []
+    },
+    "sextou": {
+      "exists": true,
+      "cats": ["Gíria (Português)", "Português brasileiro"]
+    }
+  },
+  "wd": {
+    "Kuat": [
+      ["Q41444126", "marca de refrigerante"],
+      ["Q122706696", "Star Wars planet"],
+      ["Q141331405", "male given name (Қуат)"]
+    ],
+    "Toddy": [
+      ["Q7812757", "linha de achocolatados"],
+      ["Q36987589", "sobrenome"],
+      ["Q123837768", "Canadian drag king"]
+    ],
+    "Trakinas": [],
+    "Guaravita": [],
+    "Xereta": [],
+    "Teem": [],
+    "H2OH!": [],
+    "Schin": [],
+    "Toddynho": [],
+    "Club Social": [
+      ["Q207373", "clube futebolístico de Santiago, Chile"],
+      ["Q1129059", "Association football club based in Santiago, Chile"],
+      ["Q1024337", "Guatemalan association football club"]
+    ],
+    "Negresco": [
+      ["Q160746", "empresa transnacional suíça"],
+      ["Q22222760", "Biscoito recheado"],
+      ["Q4048497", "rose cultivar"]
+    ],
+    "Passatempo": [
+      ["Q180910", "tempo que é usado livremente por indivíduos"],
+      ["Q24902509", "activity initiated by a human, intentionally or unintentionally"],
+      ["Q136794203", ""]
+    ],
+    "cafezinho": [
+      ["Q18466944", ""],
+      ["Q140902651", "angiosperma da família Salicaceae"],
+      ["Q140900531", "angiosperma da família Salicaceae"]
+    ],
+    "mungunzá": [
+      [
+        "Q10333224",
+        "doce de milho branco cozido no leite com canela tradicional em festas juninas"
+      ],
+      ["Q138542241", "doce cremoso de milho branco com amendoim moído e leite de coco"],
+      ["Q136899955", "escola rural em Campos Sales"]
+    ],
+    "Sazón": [
+      ["Q10368700", "tempero (caldo em pó)"],
+      ["Q24384", "subdivisão do ano baseada em padrões climáticos"],
+      ["Q36944686", "sobrenome"]
+    ]
+  },
+  "ibge": {
+    "gil": 9674,
+    "zeze": 370,
+    "pablo": 133420,
+    "anitta": null,
+    "ivete": 47806,
+    "xuxa": null
+  }
+}
