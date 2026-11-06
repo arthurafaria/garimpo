@@ -9,7 +9,7 @@ type Props = {
   dataset: Dataset;
   store: Store;
   onDaily: () => void;
-  onSeed: () => void;
+  onUnlimited: () => void;
   onLog: () => void;
   onMethod: () => void;
 };
@@ -28,11 +28,11 @@ const STEPS = [
   {
     n: "3",
     title: "Quanto mais rara, mais fundo",
-    body: "Cada raridade tem uma ferramenta e uma profundidade fixa: a resposta óbvia cava 10\u00a0m com a pá, a mais rara explode 100\u00a0m com dinamite. Sete respostas perfeitas chegam a 700\u00a0m.",
+    body: `Cada raridade tem uma ferramenta e uma profundidade fixa: a resposta óbvia cava ${TIERS[0].meters}\u00a0m com a pá, a mais rara explode ${TIERS[TIERS.length - 1].meters}\u00a0m com dinamite. Sete respostas perfeitas chegam a ${MAX_DEPTH}\u00a0m.`,
   },
 ];
 
-export function Home({ dataset, store, onDaily, onSeed, onLog, onMethod }: Props) {
+export function Home({ dataset, store, onDaily, onUnlimited, onLog, onMethod }: Props) {
   const today = todayKey();
   const done = store.dailyDone[today];
   const record = store.dives.reduce((best, dive) => Math.max(best, dive.depth), 0);
@@ -58,7 +58,7 @@ export function Home({ dataset, store, onDaily, onSeed, onLog, onMethod }: Props
             {done ? "Descer de novo" : "Descer"}
             <span className="btn-meta">{done ? `hoje: ${done.depth} m` : "poço do dia"}</span>
           </button>
-          <button type="button" className="btn btn-ghost btn-tall" onClick={onSeed}>
+          <button type="button" className="btn btn-ghost btn-tall" onClick={onUnlimited}>
             Ilimitado
           </button>
         </div>
@@ -124,11 +124,13 @@ export function Home({ dataset, store, onDaily, onSeed, onLog, onMethod }: Props
           <span>As mesmas sete perguntas para todo mundo, até a meia-noite.</span>
           <span className="entry-go">{done ? `você desceu ${done.depth} m` : "descer →"}</span>
         </button>
-        <button type="button" className="panel entry" onClick={onSeed}>
+        <button type="button" className="panel entry" onClick={onUnlimited}>
           <span className="entry-kicker">ilimitado</span>
-          <b>Escolha uma semente</b>
-          <span>Um número de 1 a 9999 abre sempre a mesma mina. Bom para desafiar alguém.</span>
-          <span className="entry-go">escolher →</span>
+          <b>Semente sorteada</b>
+          <span>
+            Fora do poço do dia, com um número de 1 a 9999. Qual é a mina você só descobre no fim.
+          </span>
+          <span className="entry-go">descer →</span>
         </button>
         <button type="button" className="panel entry" onClick={onLog}>
           <span className="entry-kicker">arquivo</span>

@@ -50,6 +50,28 @@ export function selectPrompts(prompts: Prompt[], seed: number, count = 7): Promp
   return picked;
 }
 
+/** The number a dive label carries ("semente 8842" → 8842), or null. */
+export function seedFromLabel(label: string): number | null {
+  const digits = /semente\s+(\d{1,4})/.exec(label)?.[1];
+  if (!digits) return null;
+  const seed = Number(digits);
+  return seed >= 1 && seed <= 9999 ? seed : null;
+}
+
+/**
+ * A seed nobody chose: 1–9999, drawn from the platform RNG.
+ * Used by the unlimited mode, which only tells the player the number at the end.
+ */
+export function randomSeed(): number {
+  const top = 9999;
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const buffer = new Uint32Array(1);
+    crypto.getRandomValues(buffer);
+    return (buffer[0] % top) + 1;
+  }
+  return Math.floor(Math.random() * top) + 1;
+}
+
 export function todayKey(now = new Date()): string {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");

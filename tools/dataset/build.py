@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .features import genders_for, positions_for, years_for
 from .http import normalize, sparql, chunks
-from .measure import composite, crawl_pageviews, zipf_map
+from .measure import composite, crawl_pageviews, uniform_rarity, zipf_map
 from .question_bank import build as build_prompts
 from .sources import CURATED, DROPPED_POOLS, city_key, load_all, merge
 from .tagging import GLOBAL_ALIASES, aliases_for, apply_tags, positions_from_labels
@@ -169,7 +169,6 @@ PEOPLE_POOLS = {
     "apresentador", "humorista", "youtuber", "bbb", "bbb_campeoes",
 }
 SHORT_MIN_SL = 12
-TOP_OBVIOUS = 0.12  # "well-known": enough Wikidata sitelinks to be typed by surname
 
 
 def short_form_owners(pools: dict[str, list[dict]]) -> dict[str, dict[str, set[str]]]:
@@ -332,15 +331,12 @@ def main() -> int:
                 "an": answer.get("attrs", {}).get("ano"),
             })
         ranked = composite(prepared)
+        # The composite decides the *order*; the flat percentile is what the game
+        # reads. It also replaces the old TOP_OBVIOUS clamp: with a percentile by
+        # rank, the most famous answer of every pool is 0.0 by construction.
+        ranked = uniform_rarity(ranked)
         applied_overrides += apply_overrides(prompt, ranked, overrides)
         ranked.sort(key=lambda a: a["popPercentile"], reverse=True)
-        # The handful of most famous answers of every pool is always "Óbvia":
-        # rank 1-3 never measure above TOP_OBVIOUS (small pools otherwise put
-        # the 3rd most famous answer at ~0.3).
-        for answer in ranked[:3]:
-            if answer["rarity"] > TOP_OBVIOUS:
-                answer["rarity"] = TOP_OBVIOUS
-                answer["popPercentile"] = round(1 - TOP_OBVIOUS, 4)
         for rank, answer in enumerate(ranked, start=1):
             answer["rank"] = rank
             if answer.get("an") is None:
@@ -364,8 +360,10 @@ def main() -> int:
                         "wordfreq_zipf_pt": 0.20, "gravity": 0.05},
             "pageviewsWindow": "last 60 days (pt.wikipedia action API prop=pageviews), scaled to a monthly mean",
             "pointsFormula": "k = clamp(round(1 + 9 * rarity^1.15), 1, 10)",
-            "rarityDefinition": "1 - weighted mean of within-prompt percentile ranks "
-                                "(documented manual clamps in tools/dataset/curated/overrides.json)",
+            "rarityDefinition": "percentile of the answer inside its prompt's measured order "
+                                "(order = 1 - weighted mean of within-prompt percentile ranks of "
+                                "pageviews, sitelinks, wordfreq and gravity; documented manual "
+                                "clamps in tools/dataset/curated/overrides.json)",
             "shareFormula": "softmax of weighted z-scores within the prompt pool",
             "depthPerPoint": 10,
             "sources": [

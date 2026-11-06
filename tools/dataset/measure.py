@@ -15,7 +15,6 @@ import json
 import math
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from importlib import import_module
 from urllib.parse import quote
@@ -163,6 +162,7 @@ def composite(answers: list[dict]) -> list[dict]:
     Each answer needs raw {pv, sl, wf, gravity}. Missing metrics are dropped for
     that answer and the remaining weights renormalised.
     """
+
     def metric(a: dict) -> dict[str, float]:
         out = {}
         if a.get("pv") is not None:
@@ -184,7 +184,7 @@ def composite(answers: list[dict]) -> list[dict]:
         col = [0.0] * len(rows)
         if present:
             ranks = _ranks([v for _, v in present])
-            for (i, _), rk in zip(present, ranks):
+            for (i, _), rk in zip(present, ranks, strict=True):
                 col[i] = rk
         pct[key] = col
 
@@ -211,7 +211,7 @@ def composite(answers: list[dict]) -> list[dict]:
     score = []
     for idx in range(len(rows)):
         s = 0.0
-        for key, z in zip(("pv", "sl", "wf", "gravity"), zs):
+        for key, z in zip(("pv", "sl", "wf", "gravity"), zs, strict=True):
             if key in rows[idx]:
                 s += WEIGHTS[key] * z[idx]
         score.append(s)
@@ -226,4 +226,30 @@ def composite(answers: list[dict]) -> list[dict]:
         answer["share"] = round(shares[i], 5)
         answer["oneIn"] = max(2, int(round(1 / shares[i]))) if shares[i] > 0 else None
         answer["points"] = round(1 + 9 * (answer["rarity"] ** 1.15))
+    return answers
+
+
+def uniform_rarity(
+    answers: list[dict], order_key: str = "popPercentile", descending: bool = True
+) -> list[dict]:
+    """Replace the composite percentile by a flat one over the measured order.
+
+    `composite` is a weighted mean of four percentile ranks, so its own
+    distribution is bell-shaped: the middle is crowded (40% of the acervo sat in
+    one 0.20 band) and the tails are nearly empty. That broke the top of the game —
+    on a 27-item pool the rarest answer stops near 0.94, so the last band was
+    unreachable, while a 1,800-item pool put a dozen answers in it. Same rarity,
+    wildly different meaning.
+
+    The game only consumes the *order*, so the order is what gets a percentile:
+    index / (n - 1). Every pool then offers the same six bands, the last answer of
+    any pool is a real 1.0, and the meter ladder means the same thing everywhere.
+    """
+    ordered = sorted(answers, key=lambda a: a[order_key], reverse=descending)
+    n = len(ordered)
+    for i, answer in enumerate(ordered):
+        rarity = 0.0 if n <= 1 else i / (n - 1)
+        answer["popPercentile"] = round(1 - rarity, 4)
+        answer["rarity"] = round(rarity, 4)
+        answer["points"] = round(1 + 9 * (rarity ** 1.15))
     return answers

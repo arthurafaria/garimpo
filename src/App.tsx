@@ -5,7 +5,14 @@ import { LOGO, type ToolId } from "./art/sprites.ts";
 import { DigCard } from "./components/DigCard.tsx";
 import { World, type WorldMark, type WorldMode } from "./components/World.tsx";
 import { findAnswer } from "./game/match.ts";
-import { dailySeed, prettyDate, selectPrompts, todayKey } from "./game/rng.ts";
+import {
+  dailySeed,
+  prettyDate,
+  randomSeed,
+  seedFromLabel,
+  selectPrompts,
+  todayKey,
+} from "./game/rng.ts";
 import { TIERS, dig, tierForDepth, tierForRarity } from "./game/score.ts";
 import { readStore, saveDive, writeStore, type Store } from "./game/storage.ts";
 import { CATEGORY_LABEL, sharesFor } from "./game/strata.ts";
@@ -16,9 +23,8 @@ import { Method } from "./screens/Method.tsx";
 import { Result } from "./screens/Result.tsx";
 import { Reveal } from "./screens/Reveal.tsx";
 import { Round } from "./screens/Round.tsx";
-import { Seed } from "./screens/Seed.tsx";
 
-type Screen = "home" | "dive" | "result" | "log" | "method" | "seed";
+type Screen = "home" | "dive" | "result" | "log" | "method";
 
 type DiveConfig = {
   mode: "daily" | "unlimited";
@@ -106,8 +112,8 @@ export default function App() {
       setRevealed(false);
       setResult(null);
       setScreen("dive");
-      if (next.mode === "daily") clearHash();
-      else window.location.hash = `#s=${next.userSeed ?? next.seed}`;
+      // O número da semente só aparece no fim: a URL fica limpa durante a descida.
+      clearHash();
       window.scrollTo({ top: 0 });
     },
     [dataset],
@@ -118,13 +124,15 @@ export default function App() {
     begin({ mode: "daily", label: prettyDate(today), seed: dailySeed(today) });
   }, [begin]);
 
+  /** Unlimited mode: no picker, a drawn seed, revealed only when the dive ends. */
   const startUnlimited = useCallback(
-    (seed: number) => {
+    (seed?: number) => {
+      const chosen = seed ?? randomSeed();
       begin({
         mode: "unlimited",
-        label: `semente ${seed}`,
-        seed: dailySeed(`s:${seed}`),
-        userSeed: seed,
+        label: `semente ${chosen}`,
+        seed: dailySeed(`s:${chosen}`),
+        userSeed: chosen,
       });
     },
     [begin],
@@ -210,6 +218,10 @@ export default function App() {
       setStore(saveDive(dive));
       setResult(dive);
       setScreen("result");
+      // Fim da descida: aí sim o número aparece, na tela e na URL (dá para desafiar alguém).
+      if (config.mode === "unlimited" && config.userSeed) {
+        window.history.replaceState(null, "", `#s=${config.userSeed}`);
+      }
       audio.bottom(total >= 700);
       window.scrollTo({ top: 0 });
     },
@@ -382,7 +394,7 @@ export default function App() {
         </button>
         <span className="quiet">
           {screen === "dive" && activePrompt
-            ? `${config?.mode === "daily" ? config.label : config?.label} · pergunta ${index + 1}/7`
+            ? `${config?.mode === "daily" ? config.label : "ilimitado"} · pergunta ${index + 1}/7`
             : dataset.stats.prompts + " perguntas · 700 m"}
         </span>
         <span className="spacer" />
@@ -403,16 +415,10 @@ export default function App() {
             dataset={dataset}
             store={store}
             onDaily={startDaily}
-            onSeed={() => setScreen("seed")}
+            onUnlimited={() => startUnlimited()}
             onLog={() => setScreen("log")}
             onMethod={() => setScreen("method")}
           />
-        </main>
-      )}
-
-      {screen === "seed" && (
-        <main className="stage">
-          <Seed onStart={startUnlimited} onHome={() => setScreen("home")} />
         </main>
       )}
 
@@ -479,17 +485,13 @@ export default function App() {
             dive={result}
             dataset={dataset}
             onHome={goHome}
-            onAgain={() =>
-              begin({
-                mode: result.mode,
-                label: result.label,
-                seed: result.seed,
-                userSeed:
-                  result.mode === "unlimited"
-                    ? Number(result.label.replace(/\D/g, "")) || undefined
-                    : undefined,
-              })
-            }
+            onAgain={() => {
+              if (result.mode === "unlimited") {
+                startUnlimited(seedFromLabel(result.label) ?? undefined);
+                return;
+              }
+              begin({ mode: "daily", label: result.label, seed: result.seed });
+            }}
             onLog={() => setScreen("log")}
             onMethod={() => setScreen("method")}
           />

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PixelSprite } from "../art/PixelSprite.tsx";
 import { MINERALS } from "../art/sprites.ts";
+import { seedFromLabel } from "../game/rng.ts";
 import { TIERS, dig, tierForDepth, tierForRarity } from "../game/score.ts";
 import { STRATA, stratumForDepth } from "../game/strata.ts";
 import type { Answer, Dataset, Dive } from "../game/types.ts";
@@ -124,6 +125,10 @@ export function Result({ dive, dataset, onHome, onAgain, onLog, onMethod }: Prop
     obvious.reduce((sum, answer) => sum + (answer ? dig(answer.rarity) : 0), 0),
   );
   const gain = dive.depth - obviousTotal;
+  // Unlimited mode never told the player which mine it dealt: this is the reveal.
+  const seed = dive.mode === "unlimited" ? seedFromLabel(dive.label) : null;
+  const shareLink =
+    seed !== null ? `${window.location.origin}${window.location.pathname}#s=${seed}` : null;
 
   const share = async () => {
     const text = [
@@ -132,8 +137,11 @@ export function Result({ dive, dataset, onHome, onAgain, onLog, onMethod }: Prop
         (round, index) =>
           `${index + 1}. ${round.prompt} — ${round.name ?? (round.guess || "—")} (${round.meters} m)`,
       ),
+      shareLink ? `mesma mina: ${shareLink}` : null,
       "sete respostas, uma mina.",
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -172,6 +180,16 @@ export function Result({ dive, dataset, onHome, onAgain, onLog, onMethod }: Prop
               : `Nenhuma camada nobre no caminho. Você parou na camada de ${lower(stratum.label)}: ${stratum.fact}. As respostas óbvias descem pouco.`}
           </p>
 
+          {seed !== null ? (
+            <p className="result-seed">
+              <span className="label">a semente era</span>
+              <b>#{seed}</b>
+              <span>
+                mesma mina para quem você mandar esse número — #{seed} abre estas sete perguntas.
+              </span>
+            </p>
+          ) : null}
+
           {finds.length ? (
             <ul className="result-finds" aria-label="o que você encontrou">
               {finds.map(({ item, count }) => (
@@ -186,7 +204,11 @@ export function Result({ dive, dataset, onHome, onAgain, onLog, onMethod }: Prop
           <div className="result-actions">
             <button type="button" className="btn" onClick={onAgain}>
               Descer de novo
-              <span className="btn-meta">mesmas perguntas</span>
+              <span className="btn-meta">
+                {dive.mode === "unlimited" && seed !== null
+                  ? `semente #${seed}`
+                  : "mesmas perguntas"}
+              </span>
             </button>
             <button type="button" className="btn btn-ghost" onClick={onLog}>
               Arquivo

@@ -120,13 +120,13 @@ raridade(i) = 1 - popularidade(i)`}</pre>
             ))}
           </ol>
           <pre>{`faixa  = a mais alta que a raridade alcança
-metros = os da faixa (10 a 100)
+metros = os da faixa (${TIERS[0].meters} a ${TIERS[TIERS.length - 1].meters})
 poço   = min(${MAX_DEPTH}, soma dos 7)`}</pre>
           <p>
-            Uma resposta óbvia sempre rende 10 m, nunca zero. Chegar aos {MAX_DEPTH} m exige sete
-            respostas na faixa mais rara (“uma em um milhão”) — uma por pergunta, não uma sorte
-            isolada. Os cortes de cada faixa são calibrados contra a distribuição de raridade do
-            acervo.
+            A resposta mais óbvia sempre rende {TIERS[0].meters} m, nunca zero — ninguém fica preso
+            na superfície. Chegar aos {MAX_DEPTH} m exige sete respostas na faixa mais rara (“uma em
+            um milhão”) — uma por pergunta, não uma sorte isolada. Cada faixa é um decil do acervo,
+            então toda pergunta oferece as seis.
           </p>
         </div>
 

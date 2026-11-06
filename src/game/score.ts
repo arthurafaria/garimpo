@@ -21,11 +21,13 @@ export type Tier = {
 };
 
 /**
- * Six fixed steps. An obvious answer always digs 10 m, the rarest always 100 m.
- * Seven perfect answers reach 700 m, the bottom of the world.
+ * Six fixed steps, 25 m to 100 m. Even the obvious answer digs something, so the
+ * player is never pinned to the first layer; a perfect seven reaches 700 m.
  *
- * `minRarity` cut points are calibrated by tools/dataset against the pools'
- * rarity distribution (see reports/dataset.md).
+ * `minRarity` are even deciles of the within-prompt rarity percentile
+ * (tools/dataset/measure.py: uniform_rarity), so every band exists in every
+ * prompt: 10% of a pool always reaches 100 m, and the last answer of any pool is
+ * a real 1.0. Same ladder everywhere, whatever the pool size.
  */
 export const TIERS: Tier[] = [
   {
@@ -33,7 +35,7 @@ export const TIERS: Tier[] = [
     label: "Óbvia",
     tool: "pa",
     toolName: "Pá",
-    meters: 10,
+    meters: 25,
     minRarity: 0,
     find: "carvao",
     findName: "carvão",
@@ -44,8 +46,8 @@ export const TIERS: Tier[] = [
     label: "Comum",
     tool: "aspirador",
     toolName: "Aspirador",
-    meters: 15,
-    minRarity: 0.2,
+    meters: 40,
+    minRarity: 0.1,
     find: "ferro",
     findName: "ferro",
     fill: "#d9d2c3",
@@ -55,8 +57,8 @@ export const TIERS: Tier[] = [
     label: "Boa",
     tool: "escavadeira",
     toolName: "Escavadeira",
-    meters: 30,
-    minRarity: 0.37,
+    meters: 55,
+    minRarity: 0.3,
     find: "cobre",
     findName: "cobre",
     fill: "#f2b65a",
@@ -66,8 +68,8 @@ export const TIERS: Tier[] = [
     label: "Rara",
     tool: "broca",
     toolName: "Broca",
-    meters: 60,
-    minRarity: 0.58,
+    meters: 70,
+    minRarity: 0.5,
     find: "ouro",
     findName: "ouro",
     fill: "#e2733b",
@@ -78,7 +80,7 @@ export const TIERS: Tier[] = [
     tool: "broca-ultra",
     toolName: "Broca ultra",
     meters: 85,
-    minRarity: 0.76,
+    minRarity: 0.7,
     find: "rubi",
     findName: "um rubi",
     fill: "#d8344f",
@@ -89,7 +91,7 @@ export const TIERS: Tier[] = [
     tool: "dinamite",
     toolName: "Dinamite",
     meters: 100,
-    minRarity: 0.95,
+    minRarity: 0.9,
     find: "diamante",
     findName: "um diamante",
     fill: "#2fd4c8",
